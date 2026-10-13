@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0b2a8a">
-<title>Kasir Rental PS</title>
+<title>Kasir Rental PS & F&B</title>
 <style>
   :root {
     --bg: #eef1f6;
@@ -84,6 +84,13 @@
   .actions { display: flex; gap: 8px; margin-top: 12px; }
   .actions button { flex: 1; }
 
+  /* Style tambahan untuk fitur pesanan (F&B) */
+  .fb-add { display: flex; gap: 6px; margin-top: 10px; }
+  .fb-add select { flex: 1; padding: 8px; font-size: .85rem; }
+  .fb-add input { width: 55px; padding: 8px; font-size: .85rem; text-align: center; }
+  .fb-list { margin-top: 6px; font-size: .85rem; display: flex; flex-direction: column; gap: 6px; }
+  .fb-item { display: flex; justify-content: space-between; align-items: center; background: var(--bg); padding: 6px 10px; border-radius: 8px; }
+
   .row { display: flex; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
   .row:last-child { border-bottom: 0; }
   .row .amt { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -96,9 +103,13 @@
 <body>
 <div class="wrap">
   <header>
-    <div>
-      <h1>Kasir Rental PS</h1>
-      <div class="sub" id="rateInfo"></div>
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <!-- Logo wr-slow.png dipanggil secara offline -->
+      <img src="wr-slow.png" alt="Logo Warung Slow" style="height: 48px; width: auto; object-fit: contain;">
+      <div>
+        <h1>Kasir Rental PS</h1>
+        <div class="sub" id="rateInfo"></div>
+      </div>
     </div>
     <div class="today">
       <span class="sub">Pendapatan hari ini</span>
@@ -107,19 +118,19 @@
   </header>
 
   <section class="card" aria-label="Mulai sesi baru">
-    <div class="grid">
+    <form id="formStart" class="grid">
       <div>
         <label for="unit">Unit / Nama penyewa</label>
-        <input id="unit" type="text" placeholder="Contoh: PS 1 - Budi" autocomplete="off">
+        <input id="unit" type="text" placeholder="Contoh: PS 1 - Budi" autocomplete="off" required>
       </div>
       <div>
         <label for="startTime">Jam mulai</label>
-        <input id="startTime" type="time">
+        <input id="startTime" type="time" required>
       </div>
       <div class="full">
-        <button id="btnStart" type="button" style="width:100%">Mulai sesi main bebas</button>
+        <button type="submit" style="width:100%">Mulai sesi main bebas</button>
       </div>
-    </div>
+    </form>
   </section>
 
   <h2>Sedang main</h2>
@@ -161,13 +172,53 @@
 (() => {
   'use strict';
 
-  const KEY = 'rentalps.v1';
+  const KEY = 'rentalps.v2';
   const $ = (id) => document.getElementById(id);
   const rupiah = (n) => 'Rp' + new Intl.NumberFormat('id-ID').format(Math.round(n));
   const pad = (n) => String(n).padStart(2, '0');
   const hhmm = (ts) => { const d = new Date(ts); return pad(d.getHours()) + ':' + pad(d.getMinutes()); };
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const ROUND_LABEL = { exact: 'per menit tepat', minute: 'per menit naik', half: 'per 30 menit', hour: 'per jam' };
+
+  // Data Menu F&B dari poster terbaru
+  const MENU_FB = [
+    { nama: "Kopi Slow", harga: 8000, kat: "Kopi" }, { nama: "Es Kopi", harga: 10000, kat: "Kopi" },
+    { nama: "Kopi Susu", harga: 12000, kat: "Kopi" }, { nama: "Es Kopi Susu", harga: 15000, kat: "Kopi" },
+    { nama: "Es Kopi Milo", harga: 17000, kat: "Kopi" }, { nama: "Es Kopsus Aren", harga: 17000, kat: "Kopi" },
+    
+    { nama: "Red Velvet", harga: 12000, kat: "Slowktail" }, { nama: "Milo", harga: 12000, kat: "Slowktail" },
+    { nama: "Coklat", harga: 12000, kat: "Slowktail" }, { nama: "Taro", harga: 12000, kat: "Slowktail" },
+    { nama: "Matcha", harga: 12000, kat: "Slowktail" }, { nama: "Cappuccino", harga: 12000, kat: "Slowktail" },
+    { nama: "Lava Lady", harga: 12000, kat: "Slowktail" }, { nama: "Vanilla", harga: 12000, kat: "Slowktail" },
+    { nama: "Tiramisu", harga: 12000, kat: "Slowktail" }, { nama: "Coco Hazel", harga: 12000, kat: "Slowktail" },
+    
+    { nama: "Lemon Tea", harga: 8000, kat: "Tea" }, { nama: "Leci Tea", harga: 10000, kat: "Tea" },
+    { nama: "Teh Susu", harga: 8000, kat: "Tea" }, { nama: "Teh Es", harga: 7000, kat: "Tea" },
+    { nama: "Peach Tea", harga: 10000, kat: "Tea" }, { nama: "Teh Telang", harga: 10000, kat: "Tea" },
+    
+    { nama: "Blue Sky", harga: 12000, kat: "Everydays" }, { nama: "Red Splash", harga: 12000, kat: "Everydays" },
+    { nama: "Darkblue", harga: 12000, kat: "Everydays" }, { nama: "Extrajos Susu", harga: 8000, kat: "Everydays" },
+    { nama: "Kukubima Susu", harga: 8000, kat: "Everydays" }, { nama: "Nutrisari Susu", harga: 8000, kat: "Everydays" },
+    
+    { nama: "Risol", harga: 3000, kat: "Snack & Makanan" }, { nama: "Cireng Kuah", harga: 15000, kat: "Snack & Makanan" },
+    { nama: "Cireng Saos", harga: 10000, kat: "Snack & Makanan" }, { nama: "Mie Goreng", harga: 13000, kat: "Snack & Makanan" },
+    { nama: "Mie Rebus", harga: 11000, kat: "Snack & Makanan" }, { nama: "Es Kosong", harga: 2000, kat: "Snack & Makanan" }
+  ];
+
+  // Siapkan HTML untuk dropdown pilihan menu
+  let menuHtmlOptions = '';
+  const groupedMenu = MENU_FB.reduce((acc, item) => {
+    if (!acc[item.kat]) acc[item.kat] = [];
+    acc[item.kat].push(item);
+    return acc;
+  }, {});
+  for (let kat in groupedMenu) {
+    menuHtmlOptions += `<optgroup label="${kat}">`;
+    groupedMenu[kat].forEach(m => {
+       menuHtmlOptions += `<option value="${m.nama}|${m.harga}">${m.nama} - ${rupiah(m.harga)}</option>`;
+    });
+    menuHtmlOptions += `</optgroup>`;
+  }
 
   const defaults = { rate: 15000, rounding: 'exact', sessions: [] };
   let state = load();
@@ -184,7 +235,6 @@
     try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* storage penuh/diblokir */ }
   }
 
-  // Hitung tagihan dari durasi (ms), tarif per jam, dan mode pembulatan.
   function cost(ms, rate, mode) {
     const min = Math.max(ms, 0) / 60000;
     switch (mode) {
@@ -194,16 +244,22 @@
       default: return min * (rate / 60);
     }
   }
+
+  function getFbTotal(orders) {
+    if (!orders) return 0;
+    return orders.reduce((sum, o) => sum + (o.harga * o.qty), 0);
+  }
+
   function duration(ms) {
     const s = Math.floor(Math.max(ms, 0) / 1000);
     return pad(Math.floor(s / 3600)) + ':' + pad(Math.floor((s % 3600) / 60)) + ':' + pad(s % 60);
   }
+
   function isToday(ts) {
     const a = new Date(ts), b = new Date();
     return a.toDateString() === b.toDateString();
   }
 
-  // Ubah "HH:MM" jadi timestamp. Jika jamnya masih di depan, dianggap kemarin (sesi lewat tengah malam).
   function timeToTs(value) {
     const now = new Date();
     if (!value) return now.getTime();
@@ -226,7 +282,8 @@
       startTs: timeToTs($('startTime').value),
       endTs: null,
       rate: state.rate,
-      rounding: state.rounding
+      rounding: state.rounding,
+      orders: [] // array baru untuk simpan pesanan
     });
     $('unit').value = '';
     setNowInput();
@@ -237,8 +294,10 @@
   function stopSession(id) {
     const s = state.sessions.find((x) => x.id === id);
     if (!s || s.endTs) return;
-    const total = cost(Date.now() - s.startTs, s.rate, s.rounding);
-    if (!confirm('Selesaikan "' + s.name + '"?\nTagihan: ' + rupiah(total))) return;
+    const rentalCost = cost(Date.now() - s.startTs, s.rate, s.rounding);
+    const fbCost = getFbTotal(s.orders);
+    const grandTotal = rentalCost + fbCost;
+    if (!confirm('Selesaikan "' + s.name + '"?\nSewa PS: ' + rupiah(rentalCost) + '\nPesanan: ' + rupiah(fbCost) + '\nTotal Tagihan: ' + rupiah(grandTotal))) return;
     s.endTs = Date.now();
     save();
     render();
@@ -261,12 +320,30 @@
     const now = Date.now();
     $('active').innerHTML = list.map((s) => {
       const ms = now - s.startTs;
+      const rentalCost = cost(ms, s.rate, s.rounding);
+      const fbCost = getFbTotal(s.orders);
+      const grandTotal = rentalCost + fbCost;
+      
+      let ordersHtml = '';
+      if (s.orders && s.orders.length > 0) {
+        ordersHtml = '<div class="fb-list">';
+        s.orders.forEach((o, i) => {
+          ordersHtml += `<div class="fb-item"><span><b>${o.qty}x</b> ${esc(o.nama)}</span><span>${rupiah(o.harga * o.qty)} <button class="ghost small" data-del="${s.id}|${i}" style="padding:2px 8px; margin-left:8px; color:var(--danger); border-color:var(--danger); border-radius: 6px;">x</button></span></div>`;
+        });
+        ordersHtml += `</div>`;
+      }
+
       return '<div class="card session">' +
         '<div class="s-top"><span class="s-name">' + esc(s.name) + '</span><span class="badge">Main</span></div>' +
-        '<div class="bill">' + rupiah(cost(ms, s.rate, s.rounding)) + '</div>' +
+        '<div class="bill">' + rupiah(grandTotal) + '</div>' +
         '<div class="meta"><span>Mulai <b>' + hhmm(s.startTs) + '</b></span>' +
         '<span>Durasi <b>' + duration(ms) + '</b></span>' +
-        '<span>' + rupiah(s.rate) + '/jam, ' + ROUND_LABEL[s.rounding] + '</span></div>' +
+        '<span>Sewa PS: <b>' + rupiah(rentalCost) + '</b></span></div>' +
+        
+        // F&B Section
+        (s.orders && s.orders.length > 0 ? `<div class="sub" style="margin-top:12px; border-top:1px dashed var(--line); padding-top:10px;">Total Pesanan: <b>${rupiah(fbCost)}</b></div>` + ordersHtml : '') +
+        `<div class="fb-add"><select id="fb-sel-${s.id}">${menuHtmlOptions}</select><input type="number" id="fb-qty-${s.id}" value="1" min="1"><button class="ghost small" data-add="${s.id}" style="color:var(--blue); border-color:var(--blue);">+ Tambah</button></div>` +
+
         '<div class="actions">' +
         '<button class="stop" type="button" data-stop="' + s.id + '">Selesai &amp; bayar</button>' +
         '<button class="ghost" type="button" data-cancel="' + s.id + '">Batal</button></div></div>';
@@ -279,15 +356,15 @@
       $('history').innerHTML = '<div class="empty">Belum ada sesi selesai.</div>';
     } else {
       $('history').innerHTML = done.slice(0, 50).map((s) => {
-        const total = cost(s.endTs - s.startTs, s.rate, s.rounding);
+        const grandTotal = cost(s.endTs - s.startTs, s.rate, s.rounding) + getFbTotal(s.orders);
         const day = isToday(s.endTs) ? 'Hari ini' : new Date(s.endTs).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
         return '<div class="row"><div><div class="s-name">' + esc(s.name) + '</div>' +
           '<div class="sub">' + day + ', ' + hhmm(s.startTs) + ' - ' + hhmm(s.endTs) + ' (' + duration(s.endTs - s.startTs) + ')</div></div>' +
-          '<div class="amt">' + rupiah(total) + '</div></div>';
+          '<div class="amt">' + rupiah(grandTotal) + '</div></div>';
       }).join('');
     }
     const todayTotal = done.filter((s) => isToday(s.endTs))
-      .reduce((sum, s) => sum + cost(s.endTs - s.startTs, s.rate, s.rounding), 0);
+      .reduce((sum, s) => sum + cost(s.endTs - s.startTs, s.rate, s.rounding) + getFbTotal(s.orders), 0);
     $('todayTotal').textContent = rupiah(todayTotal);
   }
 
@@ -301,39 +378,58 @@
     renderHistory();
   }
 
-  function exportCsv() {
-    const done = state.sessions.filter((s) => s.endTs);
-    if (!done.length) { alert('Belum ada riwayat untuk diekspor.'); return; }
-    const rows = [['nama', 'mulai', 'selesai', 'durasi', 'tagihan']].concat(done.map((s) => [
-      s.name, new Date(s.startTs).toLocaleString('id-ID'), new Date(s.endTs).toLocaleString('id-ID'),
-      duration(s.endTs - s.startTs), Math.round(cost(s.endTs - s.startTs, s.rate, s.rounding))
-    ]));
-    const csv = rows.map((r) => r.map((c) => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\n');
-    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'riwayat-rental-ps.csv';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
+  // --- Logic Event F&B ---
+  function addFb(id, nama, harga, qty) {
+    const s = state.sessions.find(x => x.id === id);
+    if (!s) return;
+    if (!s.orders) s.orders = [];
+    const exist = s.orders.find(o => o.nama === nama);
+    if (exist) exist.qty += qty;
+    else s.orders.push({ nama, harga, qty });
+    save(); render();
+  }
+  
+  function delFb(id, idx) {
+    const s = state.sessions.find(x => x.id === id);
+    if (!s || !s.orders) return;
+    s.orders.splice(idx, 1);
+    save(); render();
   }
 
-  // Event
-  $('btnStart').addEventListener('click', startSession);
+  // Event Listener Interaksi
+  $('formStart').addEventListener('submit', (e) => {
+    e.preventDefault();
+    startSession();
+  });
+
   $('active').addEventListener('click', (e) => {
     const stop = e.target.closest('[data-stop]');
     const cancel = e.target.closest('[data-cancel]');
+    const btnAdd = e.target.closest('[data-add]');
+    const btnDel = e.target.closest('[data-del]');
+    
     if (stop) stopSession(stop.dataset.stop);
     if (cancel) cancelSession(cancel.dataset.cancel);
+    if (btnAdd) {
+      const sid = btnAdd.dataset.add;
+      const sel = $(`fb-sel-${sid}`).value;
+      const qty = parseInt($(`fb-qty-${sid}`).value, 10) || 1;
+      const [nama, harga] = sel.split('|');
+      addFb(sid, nama, Number(harga), qty);
+    }
+    if (btnDel) {
+      const [sid, idx] = btnDel.dataset.del.split('|');
+      delFb(sid, Number(idx));
+    }
   });
-  $('btnCsv').addEventListener('click', exportCsv);
+
   $('btnClear').addEventListener('click', () => {
     if (!confirm('Hapus semua riwayat sesi yang sudah selesai?')) return;
     state.sessions = state.sessions.filter((s) => !s.endTs);
     save();
     render();
   });
+
   $('rate').addEventListener('change', () => {
     const v = parseInt($('rate').value, 10);
     state.rate = v > 0 ? v : defaults.rate;
@@ -341,6 +437,7 @@
     save();
     renderInfo();
   });
+  
   $('rounding').addEventListener('change', () => {
     state.rounding = $('rounding').value;
     save();
