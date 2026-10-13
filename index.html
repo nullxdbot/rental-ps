@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b2a8a">
+<title>Kasir Rental PS</title>
+<style>
+  :root {
+    --bg: #eef1f6;
+    --surface: #ffffff;
+    --ink: #101828;
+    --muted: #5b667a;
+    --line: #d9dfeb;
+    --blue: #0b2a8a;
+    --blue-soft: #e3e9fb;
+    --live: #0f8a5f;
+    --live-soft: #dff5ec;
+    --danger: #b42318;
+    --radius: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0c1220;
+      --surface: #151d31;
+      --ink: #eef2fb;
+      --muted: #98a3bd;
+      --line: #27324d;
+      --blue: #7f9bff;
+      --blue-soft: #1c2a55;
+      --live: #3fd29c;
+      --live-soft: #123428;
+      --danger: #ff8a80;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.45;
+    padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px);
+  }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 16px; }
+  header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
+  h1 { font-size: 1.25rem; margin: 0; letter-spacing: -0.01em; }
+  h2 { font-size: 1rem; margin: 22px 0 10px; }
+  .sub { color: var(--muted); font-size: .85rem; }
+  .today { text-align: right; }
+  .today b { display: block; font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; }
+  .grid { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+  label { display: block; font-size: .8rem; color: var(--muted); margin-bottom: 4px; }
+  input, select, button { font: inherit; }
+  input, select {
+    width: 100%; padding: 11px 12px; border-radius: 10px;
+    border: 1px solid var(--line); background: var(--bg); color: var(--ink);
+  }
+  input:focus-visible, select:focus-visible, button:focus-visible { outline: 3px solid var(--blue); outline-offset: 1px; }
+  .full { grid-column: 1 / -1; }
+  button {
+    border: 0; border-radius: 10px; padding: 12px 14px; font-weight: 650; cursor: pointer;
+    background: var(--blue); color: #fff;
+  }
+  @media (prefers-color-scheme: dark) { button { color: #0c1220; } }
+  button.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  button.stop { background: var(--danger); color: #fff; }
+  button.small { padding: 7px 10px; font-size: .8rem; }
+  button:active { transform: translateY(1px); }
+
+  .session { margin-bottom: 10px; border-left: 5px solid var(--live); }
+  .s-top { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+  .s-name { font-weight: 700; }
+  .badge { font-size: .75rem; padding: 2px 8px; border-radius: 99px; background: var(--live-soft); color: var(--live); font-weight: 650; }
+  .bill {
+    font-size: 2.4rem; font-weight: 800; letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums; margin: 6px 0 2px; color: var(--ink);
+  }
+  .meta { color: var(--muted); font-size: .85rem; display: flex; flex-wrap: wrap; gap: 4px 14px; }
+  .meta b { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .actions { display: flex; gap: 8px; margin-top: 12px; }
+  .actions button { flex: 1; }
+
+  .row { display: flex; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .row:last-child { border-bottom: 0; }
+  .row .amt { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .empty { color: var(--muted); text-align: center; padding: 18px 8px; font-size: .9rem; }
+  .foot { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  .note { color: var(--muted); font-size: .78rem; margin-top: 18px; text-align: center; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Kasir Rental PS</h1>
+      <div class="sub" id="rateInfo"></div>
+    </div>
+    <div class="today">
+      <span class="sub">Pendapatan hari ini</span>
+      <b id="todayTotal">Rp0</b>
+    </div>
+  </header>
+
+  <section class="card" aria-label="Mulai sesi baru">
+    <div class="grid">
+      <div>
+        <label for="unit">Unit / Nama penyewa</label>
+        <input id="unit" type="text" placeholder="Contoh: PS 1 - Budi" autocomplete="off">
+      </div>
+      <div>
+        <label for="startTime">Jam mulai</label>
+        <input id="startTime" type="time">
+      </div>
+      <div class="full">
+        <button id="btnStart" type="button" style="width:100%">Mulai sesi main bebas</button>
+      </div>
+    </div>
+  </section>
+
+  <h2>Sedang main</h2>
+  <div id="active"></div>
+
+  <h2>Riwayat</h2>
+  <section class="card" aria-label="Riwayat sesi">
+    <div id="history"></div>
+    <div class="foot">
+      <button class="ghost small" id="btnCsv" type="button">Ekspor CSV</button>
+      <button class="ghost small" id="btnClear" type="button">Hapus riwayat</button>
+    </div>
+  </section>
+
+  <h2>Pengaturan tarif</h2>
+  <section class="card" aria-label="Pengaturan tarif">
+    <div class="grid">
+      <div>
+        <label for="rate">Tarif per jam (Rp)</label>
+        <input id="rate" type="number" min="0" step="500" inputmode="numeric">
+      </div>
+      <div>
+        <label for="rounding">Pembulatan</label>
+        <select id="rounding">
+          <option value="exact">Per menit, tepat</option>
+          <option value="minute">Per menit, naik ke atas</option>
+          <option value="half">Per 30 menit, naik ke atas</option>
+          <option value="hour">Per jam penuh, naik ke atas</option>
+        </select>
+      </div>
+    </div>
+    <p class="sub" style="margin:10px 0 0">Perubahan hanya berlaku untuk sesi yang dimulai sesudahnya.</p>
+  </section>
+
+  <p class="note">Data tersimpan di browser perangkat ini (localStorage).</p>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const KEY = 'rentalps.v1';
+  const $ = (id) => document.getElementById(id);
+  const rupiah = (n) => 'Rp' + new Intl.NumberFormat('id-ID').format(Math.round(n));
+  const pad = (n) => String(n).padStart(2, '0');
+  const hhmm = (ts) => { const d = new Date(ts); return pad(d.getHours()) + ':' + pad(d.getMinutes()); };
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const ROUND_LABEL = { exact: 'per menit tepat', minute: 'per menit naik', half: 'per 30 menit', hour: 'per jam' };
+
+  const defaults = { rate: 15000, rounding: 'exact', sessions: [] };
+  let state = load();
+
+  function load() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(KEY));
+      return { ...defaults, ...(raw || {}), sessions: Array.isArray(raw && raw.sessions) ? raw.sessions : [] };
+    } catch (e) {
+      return { ...defaults };
+    }
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* storage penuh/diblokir */ }
+  }
+
+  // Hitung tagihan dari durasi (ms), tarif per jam, dan mode pembulatan.
+  function cost(ms, rate, mode) {
+    const min = Math.max(ms, 0) / 60000;
+    switch (mode) {
+      case 'minute': return Math.ceil(min) * (rate / 60);
+      case 'half': return Math.ceil(min / 30) * (rate / 2);
+      case 'hour': return Math.ceil(min / 60) * rate;
+      default: return min * (rate / 60);
+    }
+  }
+  function duration(ms) {
+    const s = Math.floor(Math.max(ms, 0) / 1000);
+    return pad(Math.floor(s / 3600)) + ':' + pad(Math.floor((s % 3600) / 60)) + ':' + pad(s % 60);
+  }
+  function isToday(ts) {
+    const a = new Date(ts), b = new Date();
+    return a.toDateString() === b.toDateString();
+  }
+
+  // Ubah "HH:MM" jadi timestamp. Jika jamnya masih di depan, dianggap kemarin (sesi lewat tengah malam).
+  function timeToTs(value) {
+    const now = new Date();
+    if (!value) return now.getTime();
+    const [h, m] = value.split(':').map(Number);
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0, 0);
+    if (d.getTime() > now.getTime()) d.setDate(d.getDate() - 1);
+    return d.getTime();
+  }
+
+  function setNowInput() {
+    const d = new Date();
+    $('startTime').value = pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+
+  function startSession() {
+    const name = $('unit').value.trim() || 'Sesi ' + (state.sessions.length + 1);
+    state.sessions.unshift({
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      name,
+      startTs: timeToTs($('startTime').value),
+      endTs: null,
+      rate: state.rate,
+      rounding: state.rounding
+    });
+    $('unit').value = '';
+    setNowInput();
+    save();
+    render();
+  }
+
+  function stopSession(id) {
+    const s = state.sessions.find((x) => x.id === id);
+    if (!s || s.endTs) return;
+    const total = cost(Date.now() - s.startTs, s.rate, s.rounding);
+    if (!confirm('Selesaikan "' + s.name + '"?\nTagihan: ' + rupiah(total))) return;
+    s.endTs = Date.now();
+    save();
+    render();
+  }
+
+  function cancelSession(id) {
+    const s = state.sessions.find((x) => x.id === id);
+    if (!s || !confirm('Batalkan dan hapus sesi "' + s.name + '"?')) return;
+    state.sessions = state.sessions.filter((x) => x.id !== id);
+    save();
+    render();
+  }
+
+  function renderActive() {
+    const list = state.sessions.filter((s) => !s.endTs);
+    if (!list.length) {
+      $('active').innerHTML = '<div class="card empty">Belum ada yang main. Isi form di atas lalu mulai sesi.</div>';
+      return;
+    }
+    const now = Date.now();
+    $('active').innerHTML = list.map((s) => {
+      const ms = now - s.startTs;
+      return '<div class="card session">' +
+        '<div class="s-top"><span class="s-name">' + esc(s.name) + '</span><span class="badge">Main</span></div>' +
+        '<div class="bill">' + rupiah(cost(ms, s.rate, s.rounding)) + '</div>' +
+        '<div class="meta"><span>Mulai <b>' + hhmm(s.startTs) + '</b></span>' +
+        '<span>Durasi <b>' + duration(ms) + '</b></span>' +
+        '<span>' + rupiah(s.rate) + '/jam, ' + ROUND_LABEL[s.rounding] + '</span></div>' +
+        '<div class="actions">' +
+        '<button class="stop" type="button" data-stop="' + s.id + '">Selesai &amp; bayar</button>' +
+        '<button class="ghost" type="button" data-cancel="' + s.id + '">Batal</button></div></div>';
+    }).join('');
+  }
+
+  function renderHistory() {
+    const done = state.sessions.filter((s) => s.endTs).sort((a, b) => b.endTs - a.endTs);
+    if (!done.length) {
+      $('history').innerHTML = '<div class="empty">Belum ada sesi selesai.</div>';
+    } else {
+      $('history').innerHTML = done.slice(0, 50).map((s) => {
+        const total = cost(s.endTs - s.startTs, s.rate, s.rounding);
+        const day = isToday(s.endTs) ? 'Hari ini' : new Date(s.endTs).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+        return '<div class="row"><div><div class="s-name">' + esc(s.name) + '</div>' +
+          '<div class="sub">' + day + ', ' + hhmm(s.startTs) + ' - ' + hhmm(s.endTs) + ' (' + duration(s.endTs - s.startTs) + ')</div></div>' +
+          '<div class="amt">' + rupiah(total) + '</div></div>';
+      }).join('');
+    }
+    const todayTotal = done.filter((s) => isToday(s.endTs))
+      .reduce((sum, s) => sum + cost(s.endTs - s.startTs, s.rate, s.rounding), 0);
+    $('todayTotal').textContent = rupiah(todayTotal);
+  }
+
+  function renderInfo() {
+    $('rateInfo').textContent = rupiah(state.rate) + '/jam, ' + ROUND_LABEL[state.rounding];
+  }
+
+  function render() {
+    renderInfo();
+    renderActive();
+    renderHistory();
+  }
+
+  function exportCsv() {
+    const done = state.sessions.filter((s) => s.endTs);
+    if (!done.length) { alert('Belum ada riwayat untuk diekspor.'); return; }
+    const rows = [['nama', 'mulai', 'selesai', 'durasi', 'tagihan']].concat(done.map((s) => [
+      s.name, new Date(s.startTs).toLocaleString('id-ID'), new Date(s.endTs).toLocaleString('id-ID'),
+      duration(s.endTs - s.startTs), Math.round(cost(s.endTs - s.startTs, s.rate, s.rounding))
+    ]));
+    const csv = rows.map((r) => r.map((c) => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'riwayat-rental-ps.csv';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  // Event
+  $('btnStart').addEventListener('click', startSession);
+  $('active').addEventListener('click', (e) => {
+    const stop = e.target.closest('[data-stop]');
+    const cancel = e.target.closest('[data-cancel]');
+    if (stop) stopSession(stop.dataset.stop);
+    if (cancel) cancelSession(cancel.dataset.cancel);
+  });
+  $('btnCsv').addEventListener('click', exportCsv);
+  $('btnClear').addEventListener('click', () => {
+    if (!confirm('Hapus semua riwayat sesi yang sudah selesai?')) return;
+    state.sessions = state.sessions.filter((s) => !s.endTs);
+    save();
+    render();
+  });
+  $('rate').addEventListener('change', () => {
+    const v = parseInt($('rate').value, 10);
+    state.rate = v > 0 ? v : defaults.rate;
+    $('rate').value = state.rate;
+    save();
+    renderInfo();
+  });
+  $('rounding').addEventListener('change', () => {
+    state.rounding = $('rounding').value;
+    save();
+    renderInfo();
+  });
+
+  // Init
+  $('rate').value = state.rate;
+  $('rounding').value = state.rounding;
+  setNowInput();
+  render();
+  setInterval(renderActive, 1000);
+})();
+</script>
+</body>
+</html>
